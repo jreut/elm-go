@@ -63,7 +63,7 @@ insert coordinate player (Board { size, dict }) =
 validateCoordinate : Int -> Coordinate -> Result InsertionFailure ()
 validateCoordinate size ( x, y ) =
     if
-        List.all ((==) True)
+        List.all identity
             [ x > 0
             , x <= size
             , y > 0
