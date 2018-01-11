@@ -1,0 +1,23 @@
+{
+  "name": "elm-go",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "description": "Go in Elm",
+  "author": "Jordan Ryan Reuter <oss@jreut.com>",
+  "private": true,
+  "scripts": {
+    "watch:open": "elm live --open src/Main.elm -- --debug",
+    "watch": "elm live src/Main.elm -- --debug",
+    "prebuild": "yarn clean && mkdir dist",
+    "build": "elm make src/Main.elm --output dist/index.html",
+    "clean": "test -d dist && rm -r dist || echo no cleanup required"
+  },
+  "devDependencies": {
+    "elm": "^0.18.0",
+    "elm-format": "^0.6.1-alpha",
+    "elm-live": "^2.7.5",
+    "elm-oracle": "^1.1.1",
+    "elm-test": "^0.18.12"
+  }
+}
