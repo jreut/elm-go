@@ -43,19 +43,11 @@ size (Board { size }) =
 
 
 insert : Coordinate -> Player -> Board -> InsertionResult
-insert coordinate player (Board { size, dict }) =
-    let
-        fromDict dict =
-            Board { dict = dict, size = size }
-    in
-        validateCoordinate size coordinate
-            |> andThen (\_ -> validateAvailable dict coordinate)
-            |> andThen
-                (\_ ->
-                    Dict.insert coordinate player dict
-                        |> fromDict
-                        |> Result.Ok
-                )
+insert coordinate player (Board board) =
+    validateCoordinate board.size coordinate
+        |> andThen (\_ -> validateAvailable board.dict coordinate)
+        |> andThen (\_ -> validateLiberties (Board board) coordinate player)
+        |> andThen (\_ -> set coordinate player (Board board) |> Result.Ok)
 
 
 validateCoordinate : Int -> Coordinate -> Result InsertionFailure ()
@@ -76,6 +68,44 @@ validateAvailable dict coordinate =
             Result.Err Occupied
 
 
+validateLiberties : Board -> Coordinate -> Player -> Result InsertionFailure ()
+validateLiberties board coordinate player =
+    let
+        inserted =
+            set coordinate player board
+    in
+        case liberties coordinate inserted of
+            0 ->
+                Result.Err Suicide
+
+            _ ->
+                Result.Ok ()
+
+
 get : Coordinate -> Board -> Maybe Player
 get coordinate (Board { dict }) =
     Dict.get coordinate dict
+
+
+set : Coordinate -> Player -> Board -> Board
+set coordinate player (Board board) =
+    Board { board | dict = Dict.insert coordinate player board.dict }
+
+
+liberties : Coordinate -> Board -> Int
+liberties ( x, y ) (Board { dict, size }) =
+    let
+        compass =
+            [ ( x + 1, y )
+            , ( x - 1, y )
+            , ( x, y - 1 )
+            , ( x, y + 1 )
+            ]
+
+        toCheck =
+            List.filter (Coordinate.isWithinSquare size) compass
+    in
+        toCheck
+            |> List.filterMap (\coordinate -> Dict.get coordinate dict)
+            |> List.length
+            |> ((-) (List.length toCheck))
