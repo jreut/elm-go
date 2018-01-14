@@ -7,6 +7,7 @@
   "author": "Jordan Ryan Reuter <oss@jreut.com>",
   "private": true,
   "scripts": {
+    "test": "elm test",
     "watch:open": "elm live --open src/Main.elm -- --debug",
     "watch": "elm live src/Main.elm -- --debug",
     "prebuild": "yarn clean && mkdir dist",
