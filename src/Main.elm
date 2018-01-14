@@ -2,7 +2,9 @@ module Main exposing (main)
 
 import Html exposing (Html)
 import Html.Events exposing (onClick)
-import Dict exposing (Dict)
+import Board exposing (Board)
+import Player exposing (Player)
+import Coordinate exposing (Coordinate)
 
 
 main : Program Never Model Msg
@@ -21,29 +23,16 @@ main =
 
 type alias Model =
     { board : Board
-    , size : Int
     , turn : Player
+    , message : Maybe String
     }
-
-
-type alias Board =
-    Dict Coordinate Player
-
-
-type alias Coordinate =
-    ( Int, Int )
-
-
-type Player
-    = White
-    | Black
 
 
 init : ( Model, Cmd Msg )
 init =
-    { board = Dict.empty
-    , size = 19
-    , turn = Black
+    { board = Board.square 19
+    , turn = Player.black
+    , message = Nothing
     }
         ! []
 
@@ -54,22 +43,37 @@ init =
 
 view : Model -> Html Msg
 view model =
-    Html.main_ []
-        [ Html.table []
-            [ Html.tbody []
-                (List.map (viewRow model.board model.size)
-                    (List.range 1 model.size)
-                )
-            ]
-        , Html.button [ onClick Pass ] [ Html.text "pass" ]
-        ]
+    let
+        size =
+            Board.size model.board
+
+        messages =
+            case model.message of
+                Nothing ->
+                    []
+
+                Just message ->
+                    [ Html.div [] [ Html.text message ]
+                    ]
+    in
+        Html.main_ []
+            ([ Html.table []
+                [ Html.tbody []
+                    (List.map (viewRow model.board size)
+                        (List.range 1 size)
+                    )
+                ]
+             , Html.button [ onClick Pass ] [ Html.text "pass" ]
+             ]
+                ++ messages
+            )
 
 
 viewRow : Board -> Int -> Int -> Html Msg
 viewRow board xSize y =
     let
         range =
-            List.map (\x -> ( x, y )) (List.range 1 xSize)
+            List.map (flip Coordinate.fromXandY y) (List.range 1 xSize)
     in
         Html.tr [] (List.map (viewCell board) range)
 
@@ -78,7 +82,7 @@ viewCell : Board -> Coordinate -> Html Msg
 viewCell board coordinate =
     let
         occupant =
-            Dict.get coordinate board
+            Board.get coordinate board
 
         rendered =
             case occupant of
@@ -104,24 +108,22 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        board =
-            case msg of
-                Click coordinate ->
-                    Dict.insert coordinate model.turn model.board
+    case msg of
+        Click coordinate ->
+            case Board.insert coordinate model.turn model.board of
+                Ok board ->
+                    { model
+                        | board = board
+                        , turn = Player.next model.turn
+                        , message = Nothing
+                    }
+                        ! []
 
-                Pass ->
-                    model.board
+                Err reason ->
+                    { model | message = Just <| toString reason } ! []
 
-        turn =
-            case model.turn of
-                White ->
-                    Black
-
-                Black ->
-                    White
-    in
-        { model | board = board, turn = turn } ! []
+        Pass ->
+            { model | turn = Player.next model.turn } ! []
 
 
 

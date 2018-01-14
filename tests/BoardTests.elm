@@ -4,7 +4,8 @@ import List
 import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, intRange, constant)
 import Test exposing (..)
-import Board exposing (Board, Player(..), InsertionFailure(..))
+import Player exposing (Player, black, white)
+import Board exposing (Board, InsertionFailure(..))
 
 
 tinyBoard : Board
@@ -28,7 +29,7 @@ boardWith size blacks whites =
                 board
                 coordinates
     in
-        Board.square size |> fold Black blacks |> fold White whites
+        Board.square size |> fold black blacks |> fold white whites
 
 
 inBounds : Int -> Fuzzer Int
@@ -46,7 +47,7 @@ outOfBounds size =
 
 fuzzPlayer : Fuzzer Player
 fuzzPlayer =
-    Fuzz.oneOf <| List.map constant [ White, Black ]
+    Fuzz.oneOf <| List.map constant [ white, black ]
 
 
 suite : Test
@@ -59,7 +60,7 @@ suite =
                         ( x, y )
 
                     player =
-                        Black
+                        black
 
                     result =
                         Board.insert coordinate player tinyBoard
@@ -82,7 +83,7 @@ suite =
                         ( x, y )
 
                     player =
-                        Black
+                        black
 
                     board =
                         case Board.insert coordinate player tinyBoard of
@@ -123,7 +124,7 @@ suite =
                         ( 2, 2 )
 
                     player =
-                        White
+                        white
                 in
                     case Board.insert coordinate player board of
                         Ok _ ->

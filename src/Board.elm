@@ -1,15 +1,17 @@
 module Board
     exposing
         ( Board
-        , Player(..)
         , InsertionFailure(..)
         , insert
         , get
+        , size
         , square
         )
 
 import Result exposing (andThen)
 import Dict exposing (Dict)
+import Player exposing (Player)
+import Coordinate exposing (Coordinate)
 
 
 type alias InsertionResult =
@@ -30,18 +32,14 @@ type Board
         }
 
 
-type alias Coordinate =
-    ( Int, Int )
-
-
-type Player
-    = Black
-    | White
-
-
 square : Int -> Board
 square size =
     Board { dict = Dict.empty, size = size }
+
+
+size : Board -> Int
+size (Board { size }) =
+    size
 
 
 insert : Coordinate -> Player -> Board -> InsertionResult
@@ -61,15 +59,8 @@ insert coordinate player (Board { size, dict }) =
 
 
 validateCoordinate : Int -> Coordinate -> Result InsertionFailure ()
-validateCoordinate size ( x, y ) =
-    if
-        List.all identity
-            [ x > 0
-            , x <= size
-            , y > 0
-            , y <= size
-            ]
-    then
+validateCoordinate size coordinate =
+    if Coordinate.isWithinSquare size coordinate then
         Result.Ok ()
     else
         Result.Err OutOfBounds
