@@ -4,6 +4,7 @@ module Player
         , next
         , black
         , white
+        , toChar
         )
 
 
@@ -30,3 +31,13 @@ next player =
 
         Black ->
             White
+
+
+toChar : Player -> Char
+toChar player =
+    case player of
+        White ->
+            'W'
+
+        Black ->
+            'B'

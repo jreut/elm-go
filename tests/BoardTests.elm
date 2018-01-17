@@ -5,7 +5,8 @@ import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, intRange, constant)
 import Test exposing (..)
 import Player exposing (Player, black, white)
-import Board exposing (Board, InsertionFailure(..))
+import Board exposing (Board, InsertionResult, InsertionFailure(..))
+import Parser exposing (parse)
 
 
 tinyBoard : Board
@@ -50,8 +51,70 @@ fuzzPlayer =
     Fuzz.oneOf <| List.map constant [ white, black ]
 
 
-suite : Test
-suite =
+insertionTest : String -> String -> ( Int, Int ) -> Player -> (InsertionResult -> Expectation) -> Test
+insertionTest description boardString coordinate player expectation =
+    test description <|
+        \_ ->
+            parse boardString
+                |> Result.map (\board -> expectation <| Board.insert coordinate player board)
+                |> Result.withDefault (Expect.fail <| "parse error on " ++ boardString)
+
+
+suicideTest : String -> String -> ( Int, Int ) -> Player -> Test
+suicideTest description boardString coordinate player =
+    insertionTest ("suicide: " ++ description)
+        boardString
+        coordinate
+        player
+        (\result ->
+            case result of
+                Ok _ ->
+                    Expect.fail "should have been suicide"
+
+                Err reason ->
+                    Expect.equal reason Suicide
+        )
+
+
+validTest : String -> String -> ( Int, Int ) -> Player -> Test
+validTest description boardString coordinate player =
+    insertionTest ("valid: " ++ description)
+        boardString
+        coordinate
+        player
+        (\result ->
+            case result of
+                Ok board ->
+                    case Board.get coordinate board of
+                        Just player_ ->
+                            Expect.equal player player_
+
+                        Nothing ->
+                            Expect.fail ((toString coordinate) ++ " should have had " ++ (toString player) ++ " instead of empty")
+
+                Err reason ->
+                    Expect.fail ("should have been valid instead of " ++ (toString reason))
+        )
+
+
+moveTest : String -> String -> ( Int, Int ) -> Player -> String -> Test
+moveTest description beforeBoard coordinate player afterBoard =
+    insertionTest description
+        beforeBoard
+        coordinate
+        player
+        (\result ->
+            case result of
+                Ok board ->
+                    Expect.equal afterBoard <| Board.toString board
+
+                Err reason ->
+                    Expect.fail ("should have been valid instead of " ++ (toString reason))
+        )
+
+
+insertTests : Test
+insertTests =
     describe "Board.insert"
         [ fuzz2 (inBounds 3) (inBounds 3) "in an empty board" <|
             \x y ->
@@ -114,22 +177,104 @@ suite =
 
                         Err reason ->
                             Expect.equal reason OutOfBounds
-        , test "suicide" <|
+        , suicideTest "four opponent neighbors"
+            """3
+-B-
+B-B
+-B-
+"""
+            ( 2, 2 )
+            white
+        , suicideTest "on edge"
+            """3
+B--
+-B-
+B--
+"""
+            ( 1, 2 )
+            white
+        , validTest "with a single liberty left"
+            """3
+B--
+-B-
+W--
+"""
+            ( 1, 2 )
+            white
+        , validTest "shared liberties"
+            """3
+-BW
+WBW
+-B-
+"""
+            ( 1, 1 )
+            white
+        , moveTest "normal move"
+            """3
+---
+B-B
+-B-
+"""
+            ( 2, 2 )
+            white
+            """3
+---
+BWB
+-B-
+"""
+        , skip <|
+            moveTest "capture in the corner"
+                """3
+WB-
+---
+---
+"""
+                ( 1, 2 )
+                black
+                """3
+-B-
+B--
+---
+"""
+        , skip <|
+            moveTest "capture with liberty race"
+                """3
+-BB
+WWB
+WWB
+"""
+                ( 1, 1 )
+                black
+                """3
+BBB
+--B
+--B
+"""
+        ]
+
+
+toStringTests : Test
+toStringTests =
+    describe "Board.toString"
+        [ test "an empty board" <|
             \_ ->
                 let
                     board =
-                        boardWith 3 [ ( 2, 1 ), ( 1, 2 ), ( 3, 2 ), ( 2, 3 ) ] []
+                        Board.square 3
 
-                    coordinate =
-                        ( 2, 2 )
-
-                    player =
-                        white
+                    expected =
+                        "3\n---\n---\n---\n"
                 in
-                    case Board.insert coordinate player board of
-                        Ok _ ->
-                            Expect.fail "should have been suicide"
+                    Expect.equal expected <|
+                        Board.toString board
+        , test "a board with some stuff" <|
+            \_ ->
+                let
+                    board =
+                        boardWith 4 [ ( 1, 1 ) ] [ ( 2, 2 ) ]
 
-                        Err reason ->
-                            Expect.equal reason Suicide
+                    expected =
+                        "4\nB---\n-W--\n----\n----\n"
+                in
+                    Expect.equal expected <| Board.toString board
         ]
