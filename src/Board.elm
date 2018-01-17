@@ -37,14 +37,6 @@ type Board
         }
 
 
-
--- TODO: implement Nat
-
-
-type alias Nat =
-    Int
-
-
 type alias Group =
     { coordinates : Set Coordinate
     , player : Player
